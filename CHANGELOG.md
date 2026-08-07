@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Correctly return 413 (Payload Too Large) if the request body exceeds the configured `max-upload-size`.
 - The association pool no longer leaks semaphore permits when the association is rejected ([GH-56](https://github.com/UMEssen/DICOM-RST/issues/56)).
+- WADO-RS multipart responses now use a random per-response boundary instead of the fixed string `boundary`, which could collide with binary DICOM payload content and corrupt the multipart framing (RFC 2046 Section 5.1).
 
 ## [0.2.1]
 
