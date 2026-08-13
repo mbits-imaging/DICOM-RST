@@ -82,6 +82,11 @@ async fn instance_resource(
 					return StatusCode::NOT_FOUND.into_response();
 				}
 
+				// RFC 2046 Section 5.1: the boundary must not occur in the
+				// encapsulated parts, which no fixed value can guarantee for
+				// binary DICOM payloads — pick a random one per response.
+				let boundary = uuid::Uuid::new_v4().simple().to_string();
+
 				Response::builder()
 					.header(
 						CONTENT_DISPOSITION,
@@ -89,11 +94,14 @@ async fn instance_resource(
 					)
 					.header(
 						CONTENT_TYPE,
-						r#"multipart/related; type="application/dicom"; boundary=boundary"#,
+						format!(
+							r#"multipart/related; type="application/dicom"; boundary={boundary}"#
+						),
 					)
 					.body(Body::from_stream(DicomMultipartStream::new(
 						stream.into_stream(),
 						transfer_syntax.as_deref(),
+						&boundary,
 					)))
 					.unwrap()
 			}

@@ -268,9 +268,12 @@ impl<'a> DicomMultipartStream<'a> {
 			+ Send
 			+ 'a,
 		transfer_syntax_uid: Option<&str>,
+		boundary: &str,
 	) -> Self {
 		let transfer_syntax_uid =
 			transfer_syntax_uid.and_then(|ts_uid| TransferSyntaxRegistry.get(ts_uid));
+		let part_boundary = boundary.to_owned();
+		let close_delimiter = format!("--{boundary}--").into_bytes();
 		#[allow(clippy::result_large_err)]
 		let multipart_stream = stream
 			.map(move |item| {
@@ -279,16 +282,15 @@ impl<'a> DicomMultipartStream<'a> {
 					if let Some(ts) = transfer_syntax_uid {
 						let mut transcoded = (*object).clone();
 						transcoded.transcode(ts).map_err(MoveError::Transcode)?;
-						Self::write(&transcoded)
+						Self::write(&transcoded, &part_boundary)
 							.map_err(|err| MoveError::Write(WriteError::Io(err)))
 					} else {
-						Self::write(&object).map_err(|err| MoveError::Write(WriteError::Io(err)))
+						Self::write(&object, &part_boundary)
+							.map_err(|err| MoveError::Write(WriteError::Io(err)))
 					}
 				})
 			})
-			.chain(futures::stream::once(async {
-				Ok(Vec::from(b"--boundary--"))
-			}))
+			.chain(futures::stream::once(async move { Ok(close_delimiter) }))
 			.boxed();
 
 		Self {
@@ -296,7 +298,10 @@ impl<'a> DicomMultipartStream<'a> {
 		}
 	}
 
-	fn write(file: &FileDicomObject<InMemDicomObject>) -> Result<Vec<u8>, std::io::Error> {
+	fn write(
+		file: &FileDicomObject<InMemDicomObject>,
+		boundary: &str,
+	) -> Result<Vec<u8>, std::io::Error> {
 		use std::io::Write;
 
 		let mut dcm = Vec::new();
@@ -304,7 +309,7 @@ impl<'a> DicomMultipartStream<'a> {
 		let file_length = dcm.len();
 		let mut buffer = Vec::new();
 
-		writeln!(buffer, "--boundary\r")?;
+		writeln!(buffer, "--{boundary}\r")?;
 		writeln!(
 			buffer,
 			"Content-Type: application/dicom; transfer-syntax=\"{}\"\r",
@@ -324,5 +329,40 @@ impl Stream for DicomMultipartStream<'_> {
 
 	fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
 		self.inner.poll_next_unpin(cx)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use dicom::object::FileMetaTableBuilder;
+	use futures::TryStreamExt;
+
+	fn test_file() -> FileDicomObject<InMemDicomObject> {
+		InMemDicomObject::new_empty().with_exact_meta(
+			FileMetaTableBuilder::new()
+				.media_storage_sop_class_uid("1.2.840.10008.5.1.4.1.1.7")
+				.media_storage_sop_instance_uid("2.25.4242")
+				.transfer_syntax("1.2.840.10008.1.2.1")
+				.build()
+				.expect("FileMetaTableBuilder should contain required data"),
+		)
+	}
+
+	#[tokio::test]
+	async fn multipart_stream_uses_the_provided_boundary() {
+		let stream = futures::stream::iter(vec![Ok(Arc::new(test_file()))]);
+		let chunks: Vec<Vec<u8>> = DicomMultipartStream::new(stream, None, "b3f7c9d1e5a24868")
+			.try_collect()
+			.await
+			.expect("stream should yield all chunks");
+		let body = chunks.concat();
+
+		assert!(body.starts_with(b"--b3f7c9d1e5a24868\r\n"));
+		assert!(body.ends_with(b"\r\n--b3f7c9d1e5a24868--"));
+		// The previously hardcoded delimiter must be gone.
+		assert!(!body
+			.windows(b"--boundary".len())
+			.any(|w| w == b"--boundary"));
 	}
 }
