@@ -14,7 +14,7 @@ The `:ro` option will mount the file into the container as read-only.
         <code-block lang="yaml">
             services:
               dicom-rst:
-                image: ghcr.io/umessen/dicom-rst:v0.2.1
+                image: ghcr.io/umessen/dicom-rst:0.3.0
                 ports:
                   - "8080:8080"
                   - "7001:7001"

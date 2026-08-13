@@ -17,12 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for the `window` query parameter for windowing.
   - Support for the `viewport` query parameter for cropping and scaling.
 - New `/metadata` endpoints for returning metadata for a given DICOM instance.
-- New `dicom-rst-s3` container image variant.
 - QIDO-RS and MWL services now support `uid-list-matching` syntax for match query parameters ([GH-46](https://github.com/UMEssen/DICOM-RST/pull/46)).
 - Support for sequence attribute filtering ([GH-49](https://github.com/UMEssen/DICOM-RST/pull/49)).
 
 ### Changed
 
+- **BREAKING**: The S3-enabled container image is now published as a tag suffix on the main image (`dicom-rst:<version>-s3`) instead of a separate `dicom-rst-s3` image.
+- **BREAKING**: Docker image tags no longer include the `v` prefix: `dicom-rst:0.3.0` instead of `dicom-rst:v0.3.0`.
 - Updated `dicom-rs` dependency to 0.9.0
   - Baseline support for files in deflate transfer syntaxes, such as `Deflated Explicit VR Little Endian`
 - Trailing slashes in URLs are now trimmed for all endpoints before processing (`/studies/` and `/studies` are equivalent).
