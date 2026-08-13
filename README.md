@@ -36,8 +36,8 @@ This is the preferred backend for most users due to the broad availability and s
 archiving and communication systems.
 
 **S3**:
-The experimental S3 backend downloads DICOM instances from S3-compatible storage. Currently, only the WADO-RS
-service is implemented.
+The experimental S3 backend downloads DICOM instances from S3-compatible storage. Currently, only WADO-RS
+instance retrieval is implemented (no metadata or rendered resources).
 
 ## DICOMweb Features
 
@@ -51,27 +51,43 @@ https://www.dicomstandard.org/using/dicomweb/retrieve-wado-rs-and-wado-uri
 #### Instance Resources
 
 | Description      | Path                                                   | Support Status |
-|------------------|--------------------------------------------------------|:--------------:|
-| Study Instances  | `studies/{study}`                                      |       ✅        |
-| Series Instances | `studies/{study}/series/{series}`                      |       ✅        |
-| Instance         | `studies/{study}/series/{series}/instances/{instance}` |       ✅        |
+| ---------------- | ------------------------------------------------------ | :------------: |
+| Study Instances  | `studies/{study}`                                      |       ✅       |
+| Series Instances | `studies/{study}/series/{series}`                      |       ✅       |
+| Instance         | `studies/{study}/series/{series}/instances/{instance}` |       ✅       |
 
 #### Metadata Resources
 
-❌ Metadata Resources are not supported.
+| Description       | Path                                                            | Support Status |
+| ----------------- | --------------------------------------------------------------- | :------------: |
+| Study Metadata    | `studies/{study}/metadata`                                      |       ✅       |
+| Series Metadata   | `studies/{study}/series/{series}/metadata`                      |       ✅       |
+| Instance Metadata | `studies/{study}/series/{series}/instances/{instance}/metadata` |       ✅       |
+
+Metadata is returned as DICOM JSON with bulkdata (e.g. pixel data) removed.
+Metadata resources are not supported by the S3 backend.
 
 #### Rendered Resources
 
-| Description      | Path                                                            | Support Status |
-|------------------|-----------------------------------------------------------------|:--------------:|
-| Study Instances  | `studies/{study}/rendered`                                      |       ✅        |
-| Series Instances | `studies/{study}/series/{series}/rendered`                      |       ✅        |
-| Instance         | `studies/{study}/series/{series}/instances/{instance}/rendered` |       ✅        |
+| Description      | Path                                                                            | Support Status |
+| ---------------- | ------------------------------------------------------------------------------- | :------------: |
+| Study Instances  | `studies/{study}/rendered`                                                      |       ✅       |
+| Series Instances | `studies/{study}/series/{series}/rendered`                                      |       ✅       |
+| Instance         | `studies/{study}/series/{series}/instances/{instance}/rendered`                 |       ✅       |
+| Frames           | `studies/{study}/series/{series}/instances/{instance}/frames/{frames}/rendered` |       ✅       |
 
-For rendering, the first instance with pixeldata is used.
+For rendering, the first frame of the first instance with pixeldata is used.
 
-| Media Type      | Support Status   |
-|-----------------|------------------|
+The following query parameters are supported:
+
+| Key      | Description                                     | Support Status |
+| -------- | ----------------------------------------------- | :------------: |
+| quality  | Compression quality for lossy formats like JPEG |       ✅       |
+| viewport | Cropping and scaling                            |       ✅       |
+| window   | Windowing (VOI LUT)                             |       ✅       |
+
+| Media Type      | Support Status    |
+| --------------- | ----------------- |
 | image/jpeg      | ✅                |
 | image/png       | ✅                |
 | image/jp2       | ❌                |
@@ -88,11 +104,12 @@ For rendering, the first instance with pixeldata is used.
 
 #### Thumbnail Resources
 
-| Description      | Path                                                             | Support Status |
-|------------------|------------------------------------------------------------------|:--------------:|
-| Study Instances  | `studies/{study}/thumbnail`                                      |       ✅        |
-| Series Instances | `studies/{study}/series/{series}/thumbnail`                      |       ✅        |
-| Instance         | `studies/{study}/series/{series}/instances/{instance}/thumbnail` |       ✅        |
+| Description      | Path                                                                             | Support Status |
+| ---------------- | -------------------------------------------------------------------------------- | :------------: |
+| Study Instances  | `studies/{study}/thumbnail`                                                      |       ✅       |
+| Series Instances | `studies/{study}/series/{series}/thumbnail`                                      |       ✅       |
+| Instance         | `studies/{study}/series/{series}/instances/{instance}/thumbnail`                 |       ✅       |
+| Frames           | `studies/{study}/series/{series}/instances/{instance}/frames/{frames}/thumbnail` |       ❌       |
 
 The thumbnail resources just perform a 303 redirect to their rendered counterparts
 
@@ -111,23 +128,23 @@ https://www.dicomstandard.org/using/dicomweb/query-qido-rs
 #### Resources
 
 | Resource                  | URI Template                                           | Support Status |
-|---------------------------|--------------------------------------------------------|:--------------:|
-| All Studies               | `/studies{?search*}`                                   |       ✅        |
-| Study's Series            | `/studies/{study}/series{?search*}`                    |       ✅        |
-| Study's Series' Instances | `/studies/{study}/series/{series}/instances{?search*}` |       ✅        |
-| Study's Instances         | `/study/{study}/instances{?search*}`                   |       ✅        |
-| All Series                | `/series{?search*}`                                    |       ✅        |
-| All Instances             | `/instances{?search*}`                                 |       ✅        |
+| ------------------------- | ------------------------------------------------------ | :------------: |
+| All Studies               | `/studies{?search*}`                                   |       ✅       |
+| Study's Series            | `/studies/{study}/series{?search*}`                    |       ✅       |
+| Study's Series' Instances | `/studies/{study}/series/{series}/instances{?search*}` |       ✅       |
+| Study's Instances         | `/studies/{study}/instances{?search*}`                 |       ✅       |
+| All Series                | `/series{?search*}`                                    |       ✅       |
+| All Instances             | `/instances{?search*}`                                 |       ✅       |
 
 #### Query Parameters
 
 | Key           | Description                             | Support Status |
-|---------------|-----------------------------------------|:--------------:|
-| {attributeID} | Query matching on supplied value        |       ✅        |
-| includefield  | Include supplied tags in result         |       ✅        |
-| fuzzymatching | Whether query should use fuzzy matching |       ❌        |
-| limit         | Return only {n} results                 |       ✅        |
-| offset        | Skip {n} results                        |       ✅        |
+| ------------- | --------------------------------------- | :------------: |
+| {attributeID} | Query matching on supplied value        |       ✅       |
+| includefield  | Include supplied tags in result         |       ✅       |
+| fuzzymatching | Whether query should use fuzzy matching |       ❌       |
+| limit         | Return only {n} results                 |       ✅       |
+| offset        | Skip {n} results                        |       ✅       |
 
 ### Store DICOM objects (STOW-RS)
 
@@ -136,9 +153,29 @@ https://www.dicomstandard.org/using/dicomweb/store-stow-rs
 #### Resources
 
 | Resource | URI Template       | Support Status |
-|----------|--------------------|:--------------:|
-| Studies  | `/studies`         |       ✅        |
-| Study    | `/studies/{study}` |       ❌        |
+| -------- | ------------------ | :------------: |
+| Studies  | `/studies`         |       ✅       |
+| Study    | `/studies/{study}` |       ❌       |
+
+### Search for Modality Worklist (MWL-RS)
+
+https://www.dicomstandard.org/news-dir/current/docs/sups/sup246.pdf
+
+#### Resources
+
+| Resource       | URI Template                                    | Support Status |
+| -------------- | ----------------------------------------------- | :------------: |
+| Worklist Items | `/modality-scheduled-procedure-steps{?search*}` |       ✅       |
+
+#### Query Parameters
+
+| Key           | Description                             | Support Status |
+| ------------- | --------------------------------------- | :------------: |
+| {attributeID} | Query matching on supplied value        |       ✅       |
+| includefield  | Include supplied tags in result         |       ✅       |
+| fuzzymatching | Whether query should use fuzzy matching |       ❌       |
+| limit         | Return only {n} results                 |       ✅       |
+| offset        | Skip {n} results                        |       ✅       |
 
 ### Manage worklist items (UPS-RS)
 
@@ -155,17 +192,18 @@ DICOM-RST provides additional features that are not part of the DICOMweb specifi
 Returns a list of configured AETs.
 
 | Resource | URI Template |
-|----------|--------------|
+| -------- | ------------ |
 | AET List | `/aets`      |
 
 ### Health Check
 
 Returns a simple OK if the connection is still healthy.
 
-| Resource     | URI Template   |
-|--------------|----------------|
-| Health Check | `/aets/{aets}` |
+| Resource     | URI Template  |
+| ------------ | ------------- |
+| Health Check | `/aets/{aet}` |
 
-[^1]: The [DICOM-RST logo](./dicom-rst-icon.png) is adapted from
-the [Rust logo](https://github.com/rust-lang/rust-artwork)
-owned by the Rust Foundation, used under CC-BY.
+[^1]:
+    The [DICOM-RST logo](./dicom-rst-icon.png) is adapted from
+    the [Rust logo](https://github.com/rust-lang/rust-artwork)
+    owned by the Rust Foundation, used under CC-BY.
