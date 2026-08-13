@@ -43,7 +43,7 @@ where
 		}
 
 		// TODO: Multi-frame images, videos and text
-		bail!("unsupported rendered media type: `{}`", &options.media_type);
+		bail!("unsupported rendered media type: `{}`", options.media_type);
 	}
 
 	bail!("empty stream: nothing to render")
